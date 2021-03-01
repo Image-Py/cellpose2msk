@@ -24,13 +24,34 @@ def flow2msk(flow, prob, grad=1.0, area=150, volume=500):
 
 if __name__ == '__main__':
     from skimage.io import imread, imsave
+    from skimage.data import coins, gravel
+    from skimage.segmentation import find_boundaries
+    
     import matplotlib.pyplot as plt
     from time import time
+
+    import cellpose
+    from cellpose import models, utils
+
+    img = gravel()
+    use_GPU = models.use_gpu()
+    model = models.Cellpose(gpu=use_GPU, model_type='cyto')
+    channels = [0, 0]
+    mask, flow, style, diam = model.eval(
+        img, diameter=30, rescale=None, channels=[0,0])
+
+    start = time()
+    water, core, msk = flow2msk(
+        flow[1].transpose(1,2,0), None, 1.0, 20, 100)
+    print('flow to mask cost:', time()-start)
+    ax1, ax2, ax3, ax4, ax5, ax6 =\
+        [plt.subplot(230+i) for i in (1,2,3,4,5,6)]
     
-    flow = imread('1.tif').transpose(1,2,0)#[150:150+256,250:506]
-    water, core, msk = flow2msk(flow, None, 1.0, 200, 400)
-    ax1, ax2, ax3 = plt.subplot(131), plt.subplot(132), plt.subplot(133)
-    ax1.imshow(np.log(water+1))
-    ax2.imshow(core)
-    ax3.imshow(msk)
+    ax1.imshow(img)
+    ax2.imshow(flow[0])
+    ax3.imshow(np.log(water+1))
+    ax4.imshow(core)
+    ax5.imshow(msk)
+    ax6.imshow(~find_boundaries(msk)*img)
     plt.show()
+    
